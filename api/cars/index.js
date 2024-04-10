@@ -1,53 +1,40 @@
-//create cars api using express
-const express = require('express');
-const app = express();
-const port = process.env.PORT || 3001;
+const cars = require("./cars.json");
 
-
-app.use(express.json());
-
-const cars = require('./cars.json');
-
-//get all cars
-app.get('/cars', (req, res) => {
-    res.json(cars);
-});
-
-//get car by id
-app.get('/cars/:id', (req, res) => {
-    const id = req.params.id;
-    const car = cars.find(car => car.id === id);
-    res.json(car);
-});
-
-//update car
-app.put('/cars/:id', (req, res) => {
-    const id = req.params.id;
-    const updatedCar = req.body;
-    const index = cars.findIndex(car => car.id === id);
-    cars[index] = updatedCar;
-    res.json(updatedCar);
-});
-
-//delete car
-app.delete('/cars/:id', (req, res) => {
-    const id = req.params.id;
-    const index = cars.findIndex(car => car.id === id);
-    cars.splice(index, 1);
-    res.json({ message: `Car with id ${id} deleted` });
-});
-
-//add car
-app.post('/cars', (req, res) => {
-    console.log(req);
-    const newCar = req.body;
-    console.log(newCar);
-    cars.push(newCar);
-    res.json(newCar);
-});
-
-//start app 
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
-
+module.exports = async function (context, req) {
+  if (req.method === 'GET') {
+      context.res.json(cars);
+  } 
+  else if (req.method === 'POST') {
+      try {
+          const newCar = req.body;
+          cars.push(newCar);
+          context.res.status(201).json(newCar);
+      } catch (error) {
+          context.res.status(500).json({ error: 'Internal Server Error' });
+      }
+  } 
+  else if (req.method === 'DELETE') {
+      try {
+          const urlParts = req.url.split('?');
+          const carId = urlParts[0].split('/').pop();
+          const queryParams = urlParts[1] ? new URLSearchParams(urlParts[1]) : null;
+          const index = queryParams ? queryParams.get('index') : null;
+          console.log("Index:", index);
+  
+          if (index !== null) {
+              const carIndex = parseInt(index, 10);
+              if (carIndex >= 0 && carIndex < cars.length) {
+                  cars.splice(carIndex, 1);
+                  context.res.status(200).json({ message: `Car at index ${carIndex} deleted` });
+                  return; 
+              }
+          }
+          context.res.status(404).json({ error: `Car with index ${index} not found` });
+      } catch (error) {
+          context.res.status(500).json({ error: 'Internal Server Error' });
+      }
+  }  
+  else {
+      context.res.status(404).json({ error: 'Not Found' });
+  }
+};
